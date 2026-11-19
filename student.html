@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SharpVE Gurukull | Student CBT Exam & Diagnostic Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .brand-navy { background-color: #0B1F3A; }
+        .brand-gold { background-color: #F59E0B; color: #0B1F3A; }
+        .brand-gold-text { color: #F59E0B; }
+        .brand-gold-border { border-color: #F59E0B; }
+        .math-scroll { overflow-x: auto; max-width: 100%; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <header class="brand-navy text-white shadow-lg border-b-2 brand-gold-border">
+        <div class="max-w-6xl mx-auto px-4 py-3.5 flex justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl brand-gold flex items-center justify-center font-extrabold text-lg">SG</div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-extrabold">SHARPVE GURUKULL</h1>
+                    <p class="text-slate-300 text-xs">Student CBT Assessment &amp; Weak/Strong Topic Diagnostic</p>
+                </div>
+            </div>
+            <a href="admin.html" class="text-xs text-slate-300 hover:text-amber-300 underline">Teacher Portal</a>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 py-6 flex-1 w-full">
+
+        <!-- Test Code + Roll No + PIN Entry -->
+        <div id="studentLoginBox" class="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+            <div class="text-center border-b pb-3">
+                <span class="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">Student Exam Hall</span>
+                <h2 class="text-lg font-extrabold text-slate-900 mt-1.5">Enter Test Code &amp; Student ID</h2>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Test Code</label>
+                    <input type="text" id="sTestCode" value="SG101" placeholder="e.g. SG101" class="w-full text-sm border rounded-lg px-3 py-2 font-mono uppercase font-bold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Student Roll No.</label>
+                    <input type="text" id="sRollNo" value="SG1001" placeholder="e.g. SG1001" class="w-full text-sm border rounded-lg px-3 py-2 font-semibold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">4-Digit PIN</label>
+                    <input type="password" id="sPin" value="1001" placeholder="Enter PIN" class="w-full text-sm border rounded-lg px-3 py-2 font-mono">
+                </div>
+            </div>
+            <button onclick="beginExam()" class="w-full brand-gold font-extrabold py-3 rounded-xl text-sm shadow">
+                Start / Resume Timed Test &rarr;
+            </button>
+        </div>
+
+        <!-- Live Exam Screen -->
+        <div id="examScreen" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-8 bg-white rounded-2xl shadow-sm border flex flex-col justify-between min-h-[500px]">
+                <div>
+                    <div class="brand-navy text-white px-5 py-3.5 rounded-t-2xl flex justify-between items-center">
+                        <div>
+                            <div id="exTitle" class="font-bold text-sm sm:text-base"></div>
+                            <div id="exStudent" class="text-[11px] text-slate-300"></div>
+                        </div>
+                        <div class="bg-slate-900 px-3.5 py-1.5 rounded-lg border border-amber-400/50 text-center">
+                            <div class="text-[9px] uppercase text-slate-400">Time Left</div>
+                            <div id="exTimer" class="font-mono font-extrabold text-base brand-gold-text">15:00</div>
+                        </div>
+                    </div>
+                    <div class="p-5 sm:p-6 space-y-4">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <span id="exCounter" class="text-xs font-bold text-slate-700"></span>
+                            <div class="flex gap-1.5">
+                                <span id="exVariety" class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-800"></span>
+                                <span id="exSubtopic" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600"></span>
+                            </div>
+                        </div>
+                        <div id="exCaseBox" class="hidden bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-lg text-xs sm:text-sm math-scroll"></div>
+                        <div id="exQText" class="text-sm sm:text-base font-semibold text-slate-900 math-scroll"></div>
+                        <div id="exOptions" class="space-y-2.5 pt-2"></div>
+                    </div>
+                </div>
+
+                <div class="px-5 py-3.5 bg-slate-50 border-t rounded-b-2xl flex flex-wrap justify-between items-center gap-2">
+                    <div class="flex gap-2">
+                        <button onclick="moveQ(-1)" class="px-3 py-2 rounded-lg text-xs font-semibold border bg-white">&larr; Prev</button>
+                        <button onclick="markQ()" class="px-3 py-2 rounded-lg text-xs font-semibold border border-amber-400 bg-amber-50 text-amber-900">Mark Review</button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="moveQ(1)" class="px-4 py-2 rounded-lg text-xs font-bold brand-navy text-white">Next &rarr;</button>
+                        <button onclick="finishExam(false)" class="px-4 py-2 rounded-lg text-xs font-extrabold bg-emerald-600 text-white">Submit Test</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 bg-white p-5 rounded-2xl shadow-sm border h-fit space-y-3">
+                <h3 class="text-xs font-bold uppercase text-slate-500">Question Palette</h3>
+                <div id="exPalette" class="grid grid-cols-5 gap-2"></div>
+            </div>
+        </div>
+
+        <!-- Result & Weak/Strong Diagnostic Screen -->
+        <div id="resultScreen" class="hidden max-w-4xl mx-auto bg-white p-6 rounded-2xl shadow-sm border space-y-5">
+            <div class="flex justify-between items-center border-b pb-4">
+                <div>
+                    <h2 id="rTitle" class="text-lg font-extrabold text-slate-900"></h2>
+                    <p id="rSub" class="text-xs text-slate-500"></p>
+                </div>
+                <div class="brand-navy text-white px-5 py-2.5 rounded-xl text-center border-b-4 brand-gold-border">
+                    <div id="rScore" class="text-xl font-extrabold brand-gold-text"></div>
+                    <div id="rPct" class="text-xs"></div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-slate-50 p-4 rounded-xl border">
+                    <h3 class="text-xs font-bold uppercase text-slate-600 mb-2">Variety Performance</h3>
+                    <div id="rVarietyBox" class="space-y-2 text-xs"></div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-xl border">
+                    <h3 class="text-xs font-bold uppercase text-slate-600 mb-2">Topic Diagnosis (Strong vs Weak)</h3>
+                    <div id="rTopicBox" class="space-y-2 text-xs"></div>
+                </div>
+            </div>
+            <div id="rSolutionsBox" class="space-y-2.5 max-h-96 overflow-y-auto"></div>
+            <button onclick="location.reload()" class="brand-navy text-white text-xs font-bold px-4 py-2.5 rounded-xl">Attempt Another Test</button>
+        </div>
+
+    </main>
+
+    <script>
+        let session = null, qIdx = 0, answers = {}, reviews = {}, timer = null, remSec = 0;
+
+        function seededShuffle(arr, seedStr) {
+            const copy = [...arr];
+            let h = 2166136261;
+            for (let i = 0; i < seedStr.length; i++) { h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619); }
+            for (let i = copy.length - 1; i > 0; i--) {
+                h ^= h << 13; h ^= h >>> 17; h ^= h << 5;
+                const j = Math.abs(h) % (i + 1);
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
+
+        function beginExam() {
+            const code = document.getElementById('sTestCode').value.trim().toUpperCase();
+            const roll = document.getElementById('sRollNo').value.trim().toUpperCase();
+            const pin = document.getElementById('sPin').value.trim();
+
+            const roster = JSON.parse(localStorage.getItem('sharpve_cbt_roster_v4') || '[]');
+            const tests = JSON.parse(localStorage.getItem('sharpve_cbt_tests_v4') || '[]');
+
+            const stu = roster.find(r => r.roll_no.toUpperCase() === roll);
+            if (!stu) return alert('Roll No. not found in teacher roster.');
+            if (stu.pin_code !== pin) return alert('Invalid PIN.');
+
+            const test = tests.find(t => t.test_code.toUpperCase() === code);
+            if (!test) return alert('Test Code not found.');
+
+            const attempts = JSON.parse(localStorage.getItem('sharpve_cbt_attempts_v4') || '[]');
+            if (attempts.some(a => a.test_code.toUpperCase() === code && a.roll_no.toUpperCase() === roll && a.status === 'SUBMITTED')) {
+                return alert('You have already submitted this test.');
+            }
+
+            // Build student question view (stripping answer key before rendering exam)
+            let qs = test.questions.map((q, origIdx) => ({
+                origIdx,
+                q_no: q.q_no || origIdx + 1,
+                variety: q.variety,
+                subtopic: q.subtopic || test.chapter,
+                case_passage: q.case_passage || '',
+                question_text: q.question_text,
+                options: test.shuffle_questions && q.variety !== 'Assertion-Reason' ? seededShuffle(q.options || [], roll + '_' + code + '_' + origIdx) : (q.options || [])
+            }));
+            if (test.shuffle_questions) qs = seededShuffle(qs, roll + '_' + code);
+
+            // Resume draft if phone refreshed mid-test
+            const draftKey = `sharpve_draft_${code}_${roll}`;
+            const savedDraft = JSON.parse(localStorage.getItem(draftKey) || 'null');
+            answers = savedDraft?.answers || {};
+            reviews = savedDraft?.reviews || {};
+            remSec = savedDraft?.remSec || ((test.duration_mins || 15) * 60);
+
+            session = { test, stu, qs, draftKey };
+            document.getElementById('studentLoginBox').classList.add('hidden');
+            document.getElementById('examScreen').classList.remove('hidden');
+            document.getElementById('exTitle').textContent = test.title;
+            document.getElementById('exStudent').textContent = `${stu.student_name} (${stu.roll_no}) • ${stu.class_name}`;
+
+            runTimer();
+            drawQ();
+        }
+
+        function saveDraftLocal() {
+            if (!session) return;
+            localStorage.setItem(session.draftKey, JSON.stringify({ answers, reviews, remSec }));
+        }
+
+        function runTimer() {
+            clearInterval(timer);
+            const paint = () => {
+                const m = Math.floor(Math.max(0, remSec) / 60), s = Math.max(0, remSec) % 60;
+                document.getElementById('exTimer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                if (remSec % 5 === 0) saveDraftLocal();
+                if (remSec <= 0) { clearInterval(timer); finishExam(true); }
+                remSec--;
+            };
+            paint();
+            timer = setInterval(paint, 1000);
+        }
+
+        function drawQ() {
+            const q = session.qs[qIdx];
+            document.getElementById('exCounter').textContent = `Question ${qIdx + 1} of ${session.qs.length}`;
+            document.getElementById('exVariety').textContent = q.variety;
+            document.getElementById('exSubtopic').textContent = q.subtopic;
+
+            const cb = document.getElementById('exCaseBox');
+            if (q.case_passage) { cb.classList.remove('hidden'); cb.innerHTML = `<strong>Case Passage:</strong><br>${esc(q.case_passage).replace(/\n/g,'<br>')}`; }
+            else cb.classList.add('hidden');
+
+            document.getElementById('exQText').innerHTML = esc(q.question_text).replace(/\n/g,'<br>');
+            const chosen = answers[q.origIdx];
+            document.getElementById('exOptions').innerHTML = q.options.map((opt, idx) => {
+                const sel = chosen === opt;
+                return `<label onclick="pickOpt(${idx})" class="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer ${sel?'border-amber-500 bg-amber-50 font-semibold':'border-slate-200 hover:bg-slate-50'}">
+                    <span class="w-5 h-5 rounded-full border-2 flex items-center justify-center text-xs ${sel?'border-amber-600 bg-amber-500 font-bold':'border-slate-400'}">${['A','B','C','D'][idx]}</span>
+                    <span class="text-sm math-scroll">${esc(opt)}</span>
+                </label>`;
+            }).join('');
+
+            document.getElementById('exPalette').innerHTML = session.qs.map((item, i) => {
+                let c = 'bg-slate-200 text-slate-700';
+                if (reviews[item.origIdx]) c = 'bg-amber-400 text-slate-900 font-bold';
+                else if (answers[item.origIdx]) c = 'bg-emerald-500 text-white font-bold';
+                return `<button onclick="qIdx=${i};drawQ()" class="h-9 rounded-lg text-xs ${c} ${i===qIdx?'ring-2 ring-slate-900':''}">${i+1}</button>`;
+            }).join('');
+            renderMath(document.getElementById('examScreen'));
+        }
+
+        function pickOpt(idx) { answers[session.qs[qIdx].origIdx] = session.qs[qIdx].options[idx]; saveDraftLocal(); drawQ(); }
+        function markQ() { const k = session.qs[qIdx].origIdx; reviews[k] = !reviews[k]; saveDraftLocal(); drawQ(); }
+        function moveQ(d) { const n = qIdx + d; if (n >= 0 && n < session.qs.length) { qIdx = n; drawQ(); } }
+
+        function finishExam(auto) {
+            if (!auto && !confirm('Submit test now?')) return;
+            clearInterval(timer);
+            localStorage.removeItem(session.draftKey);
+
+            let correct = 0, rawScore = 0;
+            const vStats = {}, tStats = {}, items = [];
+
+            session.test.questions.forEach((origQ, idx) => {
+                const chosen = answers[idx];
+                const corrOpt = origQ.options[origQ.correct_index];
+                const ok = chosen !== undefined && chosen === corrOpt;
+                if (ok) { correct++; rawScore += 1; }
+                else if (session.test.negative_marking && chosen !== undefined) { rawScore -= 0.25; }
+
+                const v = origQ.variety || 'Standard MCQ';
+                if (!vStats[v]) vStats[v] = { correct: 0, total: 0 };
+                vStats[v].total++; if (ok) vStats[v].correct++;
+
+                const t = origQ.subtopic || session.test.chapter;
+                if (!tStats[t]) tStats[t] = { correct: 0, total: 0 };
+                tStats[t].total++; if (ok) tStats[t].correct++;
+
+                items.push({ q_no: idx+1, variety: v, subtopic: t, question_text: origQ.question_text, chosen: chosen || 'Not Attempted', corr: corrOpt, ok, exp: origQ.explanation });
+            });
+
+            const finalScore = Math.max(0, Math.round(rawScore));
+            const pct = Math.round((correct / session.test.questions.length) * 100);
+            const rec = {
+                id: 'att_' + Date.now(),
+                test_code: session.test.test_code,
+                test_title: session.test.title,
+                roll_no: session.stu.roll_no,
+                student_name: session.stu.student_name,
+                status: 'SUBMITTED',
+                submitted_at: new Date().toLocaleString(),
+                score: finalScore,
+                total: session.test.questions.length,
+                percentage: pct,
+                variety_stats: vStats,
+                topic_stats: tStats,
+                items
+            };
+
+            const attempts = JSON.parse(localStorage.getItem('sharpve_cbt_attempts_v4') || '[]');
+            attempts.unshift(rec);
+            localStorage.setItem('sharpve_cbt_attempts_v4', JSON.stringify(attempts));
+
+            document.getElementById('examScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.remove('hidden');
+            document.getElementById('rTitle').textContent = rec.test_title;
+            document.getElementById('rSub').textContent = `${rec.student_name} (${rec.roll_no}) • ${rec.submitted_at}`;
+            document.getElementById('rScore').textContent = `${rec.score} / ${rec.total}`;
+            document.getElementById('rPct').textContent = `${rec.percentage}% Accuracy`;
+
+            document.getElementById('rVarietyBox').innerHTML = Object.entries(vStats).map(([k,v])=>`<div class="flex justify-between p-2 bg-white rounded border"><span class="font-semibold">${esc(k)}</span><span class="font-bold">${v.correct}/${v.total} (${Math.round(v.correct/v.total*100)}%)</span></div>`).join('');
+            document.getElementById('rTopicBox').innerHTML = Object.entries(tStats).map(([k,v])=>{
+                const p=Math.round(v.correct/v.total*100);
+                return `<div class="flex justify-between p-2 bg-white rounded border"><span class="font-semibold">${esc(k)}</span><span class="font-bold ${p>=70?'text-emerald-700':'text-amber-700'}">${p}% (${p>=70?'Strong':'Weak'})</span></div>`;
+            }).join('');
+            document.getElementById('rSolutionsBox').innerHTML = items.map(it=>`<div class="p-3 rounded-xl border text-xs space-y-1 ${it.ok?'bg-emerald-50/40 border-emerald-200':'bg-amber-50/40 border-amber-300'}"><div class="font-bold flex justify-between"><span>Q${it.q_no} • ${esc(it.subtopic)}</span><span>${it.ok?'Correct':'Incorrect'}</span></div><div class="math-scroll">${esc(it.question_text)}</div><div>Your: ${esc(it.chosen)} | Key: <strong>${esc(it.corr)}</strong></div><div class="text-slate-600 math-scroll">Solution: ${esc(it.exp)}</div></div>`).join('');
+            renderMath(document.getElementById('resultScreen'));
+        }
+
+        function renderMath(el) { if (window.renderMathInElement) renderMathInElement(el, { delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false }); }
+        function esc(t) { return t===null||t===undefined?'':String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    </script>
+</body>
+</html>

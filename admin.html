@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SharpVE Gurukull | Teacher Admin & Audit Portal (Class 06 - 12)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .brand-navy { background-color: #0B1F3A; }
+        .brand-gold { background-color: #F59E0B; color: #0B1F3A; }
+        .brand-gold-text { color: #F59E0B; }
+        .brand-gold-border { border-color: #F59E0B; }
+        .math-scroll { overflow-x: auto; max-width: 100%; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Teacher Lock Gate (Default PIN: 2026, changeable in settings) -->
+    <div id="teacherLockScreen" class="fixed inset-0 brand-navy z-50 flex items-center justify-center p-4">
+        <div class="bg-white text-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 border-t-4 brand-gold-border">
+            <div class="text-center">
+                <div class="w-12 h-12 rounded-xl brand-navy text-amber-400 font-extrabold text-xl flex items-center justify-center mx-auto mb-2">SG</div>
+                <h1 class="text-lg font-extrabold">SharpVE Gurukull</h1>
+                <p class="text-xs text-slate-500">Teacher Command &amp; Audit Portal (Jaipur)</p>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Teacher Portal PIN</label>
+                <input type="password" id="teacherPinInput" placeholder="Enter PIN (Default: 2026)" onkeydown="if(event.key==='Enter')unlockTeacherPortal()"
+                    class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2.5 focus:outline-none focus:border-amber-500">
+            </div>
+            <button onclick="unlockTeacherPortal()" class="w-full brand-gold font-extrabold py-2.5 rounded-xl text-sm shadow">
+                Unlock Teacher Portal &rarr;
+            </button>
+            <p id="lockErrMsg" class="text-xs text-red-600 text-center font-semibold hidden"></p>
+        </div>
+    </div>
+
+    <!-- Top Header -->
+    <header class="brand-navy text-white shadow-lg border-b-2 brand-gold-border">
+        <div class="max-w-7xl mx-auto px-4 py-3.5 flex flex-col lg:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl brand-gold flex items-center justify-center font-extrabold text-lg">SG</div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg sm:text-xl font-extrabold">SHARPVE GURUKULL</h1>
+                        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40">Teacher Admin v4.0</span>
+                    </div>
+                    <p class="text-slate-300 text-xs">Test Generator &bull; Key Review &bull; Student Roster &bull; Class &amp; Offline WTP Audit</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5 bg-slate-900/80 p-1.5 rounded-xl border border-slate-700">
+                <button onclick="switchTab('builder')" id="tBuilder" class="px-3 py-1.5 rounded-lg text-xs font-bold brand-gold">1. Create &amp; Publish</button>
+                <button onclick="switchTab('roster')" id="tRoster" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-200 hover:bg-slate-800">2. Student Roster</button>
+                <button onclick="switchTab('analytics')" id="tAnalytics" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-200 hover:bg-slate-800">3. Class &amp; Offline Audit</button>
+                <a href="student.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white">Student Exam Page &rarr;</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full">
+
+        <!-- =====================================================================
+             TAB 1: TEST GENERATOR + MANDATORY REVIEW/EDIT BEFORE PUBLISH
+             ===================================================================== -->
+        <section id="tab_builder" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Form -->
+            <div class="lg:col-span-5 space-y-4">
+                
+                <!-- API & Optional Supabase Cloud Sync Config -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-2.5">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold uppercase text-slate-500">Gemini API Key</span>
+                        <span id="keyStatus" class="text-[11px] font-semibold text-slate-500">Not tested</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="password" id="apiKeyInput" placeholder="Paste AIzaSy... key" class="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2">
+                        <button onclick="saveAndTestKey()" id="testKeyBtn" class="brand-navy text-white text-xs font-semibold px-3 py-2 rounded-lg">Save &amp; Test</button>
+                    </div>
+                    <details class="text-[11px] text-slate-600 pt-1">
+                        <summary class="cursor-pointer font-semibold text-indigo-800">Optional: Connect Supabase Cloud (Multi-Device Sync)</summary>
+                        <div class="mt-2 space-y-2 bg-slate-50 p-2.5 rounded-lg border">
+                            <input type="text" id="sbUrlInput" placeholder="https://xxxx.supabase.co" class="w-full text-xs border rounded px-2.5 py-1.5 bg-white">
+                            <input type="password" id="sbAnonKeyInput" placeholder="Supabase anon public key" class="w-full text-xs border rounded px-2.5 py-1.5 bg-white">
+                            <button onclick="saveSupabaseConfig()" class="bg-indigo-700 text-white text-[11px] font-bold px-3 py-1.5 rounded">Save Cloud Config</button>
+                        </div>
+                    </details>
+                </div>
+
+                <!-- Test Specs -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                    <h2 class="text-xs font-bold uppercase text-slate-500">Test Blueprint &amp; Settings</h2>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Class (06–12)</label>
+                            <select id="bClass" onchange="updateSubjects()" class="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white font-semibold">
+                                <option>Class 06</option><option>Class 07</option><option>Class 08</option><option>Class 09</option>
+                                <option selected>Class 10</option><option>Class 11</option><option>Class 12</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Subject</label>
+                            <select id="bSubject" class="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white font-semibold"></select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Board</label>
+                            <select id="bBoard" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-2 bg-white">
+                                <option value="CBSE">CBSE</option>
+                                <option value="RBSE">RBSE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Timer (Mins)</label>
+                            <input type="number" id="bDuration" value="20" min="5" max="180" class="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2 font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Level</label>
+                            <select id="bLevel" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-2 bg-white">
+                                <option value="Moderate">Moderate</option>
+                                <option value="Weak Student Remedial">Weak (Basic)</option>
+                                <option value="Advanced / Hard">Hard (HOTS)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-lg border">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-600 mb-0.5">Standard MCQ</label>
+                            <input type="number" id="cntMcq" value="5" min="0" max="25" class="w-full text-xs border rounded px-2 py-1 bg-white font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-600 mb-0.5">Assert-Reason</label>
+                            <input type="number" id="cntAr" value="2" min="0" max="10" class="w-full text-xs border rounded px-2 py-1 bg-white font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-600 mb-0.5">Case-Study (x4)</label>
+                            <input type="number" id="cntCase" value="1" min="0" max="4" class="w-full text-xs border rounded px-2 py-1 bg-white font-bold">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-700 mb-1">Strict Chapter(s) <span class="text-amber-600">*</span></label>
+                        <input type="text" id="bChapter" placeholder="e.g., Ch 4: Quadratic Equations ONLY" class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 font-semibold">
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-700 mb-1">Reference PDF / Photo (Optional)</label>
+                        <input type="file" id="bFiles" accept="image/*,application/pdf" multiple class="block w-full text-xs text-slate-600 border border-slate-300 rounded-lg p-1">
+                    </div>
+
+                    <div class="flex flex-wrap gap-4 text-xs text-slate-700 pt-1">
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" id="bShuffle" checked class="rounded">
+                            <span>Shuffle Qs &amp; Options</span>
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" id="bNegMarking" class="rounded">
+                            <span>Negative Marking (-0.25)</span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-700 mb-1">Teacher Instructions</label>
+                        <textarea id="bInstructions" rows="2" placeholder="e.g., Verify all core concepts of this chapter..." class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2"></textarea>
+                    </div>
+
+                    <button onclick="generateDraftForReview()" id="genDraftBtn" class="w-full brand-navy text-white font-bold py-3 px-4 rounded-xl shadow text-sm border-b-2 brand-gold-border">
+                        Generate Draft &rarr; Review Answer Key
+                    </button>
+                    <div id="builderMsg" class="text-xs text-center font-semibold hidden"></div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Mandatory Review & Edit Box + Published Tests -->
+            <div class="lg:col-span-7 space-y-4">
+                
+                <!-- Draft Review & Edit Card (Prevents wrong AI answers from reaching students!) -->
+                <div id="draftReviewPanel" class="hidden bg-white p-5 rounded-xl shadow-md border-2 border-amber-400 space-y-4">
+                    <div class="flex flex-wrap justify-between items-center gap-2 border-b pb-3">
+                        <div>
+                            <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-100 text-amber-900">Step A: Teacher Quality Check</span>
+                            <h3 id="draftTitleHeading" class="text-base font-extrabold text-slate-900 mt-1">Review &amp; Edit Questions Before Publishing</h3>
+                        </div>
+                        <button onclick="publishReviewedDraft()" id="publishBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl shadow">
+                            &#10003; Approve &amp; Publish Test
+                        </button>
+                    </div>
+                    <div id="draftQuestionsList" class="space-y-3 max-h-[520px] overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- Published Tests List with Test Codes -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-3 pb-2 border-b">
+                        <div>
+                            <h2 class="text-base font-extrabold text-slate-900">Published Tests &amp; Student Exam Codes</h2>
+                            <p class="text-xs text-slate-500">Share the <strong>Test Code</strong> with students on <code class="bg-slate-100 px-1 rounded">student.html</code>.</p>
+                        </div>
+                        <button onclick="exportPortalBackup()" class="text-xs font-semibold px-3 py-1.5 rounded-lg border hover:bg-slate-50">Export JSON</button>
+                    </div>
+                    <div id="publishedTestsBox" class="space-y-2.5"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================================
+             TAB 2: STUDENT ROSTER (ROLL NO + 4-DIGIT PIN + LAST YEAR %)
+             ===================================================================== -->
+        <section id="tab_roster" class="hidden space-y-4">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <div>
+                    <h2 class="text-base font-extrabold text-slate-900">Student Roster &amp; Login Credentials</h2>
+                    <p class="text-xs text-slate-500">Students log in with their <strong>Roll No.</strong> and <strong>4-digit PIN</strong> so attempts cannot be faked or duplicated.</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
+                    <input type="text" id="rRoll" placeholder="Roll No. (e.g. SG1001)" class="text-xs border rounded-lg px-3 py-2 font-semibold">
+                    <input type="text" id="rName" placeholder="Student Full Name" class="text-xs border rounded-lg px-3 py-2">
+                    <select id="rClass" class="text-xs border rounded-lg px-2.5 py-2 bg-white">
+                        <option>Class 06</option><option>Class 07</option><option>Class 08</option><option>Class 09</option>
+                        <option selected>Class 10</option><option>Class 11</option><option>Class 12</option>
+                    </select>
+                    <input type="text" id="rPin" placeholder="4-Digit PIN (e.g. 1001)" maxlength="6" class="text-xs border rounded-lg px-3 py-2 font-mono">
+                    <input type="number" id="rLastYear" placeholder="Last Year % (opt)" class="text-xs border rounded-lg px-3 py-2">
+                </div>
+                <div class="flex justify-end">
+                    <button onclick="addRosterStudent()" class="brand-navy text-white text-xs font-bold px-4 py-2 rounded-lg">+ Add Student to Roster</button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left border-collapse">
+                        <thead class="bg-slate-100 text-slate-700 font-bold border-b">
+                            <tr>
+                                <th class="p-2.5">Roll No.</th>
+                                <th class="p-2.5">Name</th>
+                                <th class="p-2.5">Class</th>
+                                <th class="p-2.5">PIN</th>
+                                <th class="p-2.5">Last Year %</th>
+                                <th class="p-2.5">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rosterTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================================
+             TAB 3: CLASS ANALYTICS, OFFLINE WTP & WHATSAPP PARENT REPORT
+             ===================================================================== -->
+        <section id="tab_analytics" class="hidden space-y-5">
+            <div class="brand-navy text-white p-5 rounded-2xl flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-extrabold">Class Diagnostic Heatmap &amp; Offline Marks Audit</h2>
+                    <p class="text-xs text-slate-300">Combined view of Digital CBT attempts, Offline WTP / School Exams, and Last Year results.</p>
+                </div>
+                <button onclick="exportAttemptsCSV()" class="brand-gold text-xs font-extrabold px-4 py-2 rounded-xl">Download Results CSV</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div class="bg-white p-5 rounded-xl shadow-sm border">
+                    <h3 class="text-sm font-bold text-slate-900 mb-2">Class Weakest Topics</h3>
+                    <div id="aWeakTopics" class="space-y-2 text-xs"></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border">
+                    <h3 class="text-sm font-bold text-slate-900 mb-2">Variety Accuracy (MCQ vs A-R vs Case-Study)</h3>
+                    <div id="aVarieties" class="space-y-2.5 text-xs"></div>
+                </div>
+            </div>
+
+            <!-- Offline Marks Entry -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border space-y-3">
+                <h3 class="text-sm font-bold text-slate-900">Record Offline Marks (WTP / School Exam)</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
+                    <input type="text" id="oRoll" placeholder="Student Roll No." class="text-xs border rounded-lg px-2.5 py-2">
+                    <input type="text" id="oSubject" placeholder="Subject" class="text-xs border rounded-lg px-2.5 py-2">
+                    <select id="oType" class="text-xs border rounded-lg px-2 py-2 bg-white">
+                        <option>Weekly Test (WTP)</option>
+                        <option>School Half-Yearly</option>
+                        <option>School Pre-Board / Annual</option>
+                    </select>
+                    <input type="number" id="oObt" placeholder="Marks Obtained" class="text-xs border rounded-lg px-2.5 py-2">
+                    <input type="number" id="oMax" placeholder="Max Marks" value="25" class="text-xs border rounded-lg px-2.5 py-2">
+                </div>
+                <button onclick="saveOfflineMark()" class="brand-navy text-white text-xs font-bold px-4 py-2 rounded-lg">+ Save Offline Record</button>
+            </div>
+
+            <!-- Student Performance & WhatsApp Report Table -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border overflow-x-auto">
+                <h3 class="text-sm font-bold text-slate-900 mb-3">Student Diagnostic Summary &amp; WhatsApp Parent Report</h3>
+                <table class="w-full text-xs text-left border-collapse">
+                    <thead class="bg-slate-100 text-slate-700 font-bold border-b">
+                        <tr>
+                            <th class="p-2.5">Student</th>
+                            <th class="p-2.5">CBT Avg</th>
+                            <th class="p-2.5">Offline Avg</th>
+                            <th class="p-2.5">Last Year %</th>
+                            <th class="p-2.5">Weak Topic</th>
+                            <th class="p-2.5">Parent Report</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditRosterBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const SUBJECTS = {
+            "Class 06": ["Mathematics","Science","Social Science","English","Hindi"],
+            "Class 07": ["Mathematics","Science","Social Science","English","Hindi"],
+            "Class 08": ["Mathematics","Science","Social Science","English","Hindi"],
+            "Class 09": ["Mathematics","Science","Social Science","English","Hindi"],
+            "Class 10": ["Mathematics","Science","Social Science","English","Hindi"],
+            "Class 11": ["Physics","Chemistry","Mathematics","Accountancy","Economics","Business Studies"],
+            "Class 12": ["Physics","Chemistry","Mathematics","Accountancy","Economics","Business Studies"]
+        };
+
+        let tests = [], roster = [], attempts = [], offlineMarks = [], draftTest = null, models = [];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateSubjects();
+            loadAll();
+            renderAll();
+        });
+
+        function unlockTeacherPortal() {
+            const pin = document.getElementById('teacherPinInput').value.trim();
+            const savedPin = localStorage.getItem('sharpve_admin_pin') || '2026';
+            if (pin === savedPin) {
+                document.getElementById('teacherLockScreen').classList.add('hidden');
+            } else {
+                const err = document.getElementById('lockErrMsg');
+                err.textContent = 'Incorrect PIN. Default PIN is 2026.';
+                err.classList.remove('hidden');
+            }
+        }
+
+        function loadAll() {
+            try {
+                const k = localStorage.getItem('sharpve_gemini_key') || '';
+                if (k) { document.getElementById('apiKeyInput').value = k; discoverModels(k); }
+                document.getElementById('sbUrlInput').value = localStorage.getItem('sharpve_sb_url') || '';
+                document.getElementById('sbAnonKeyInput').value = localStorage.getItem('sharpve_sb_anon') || '';
+                tests = JSON.parse(localStorage.getItem('sharpve_cbt_tests_v4') || '[]');
+                roster = JSON.parse(localStorage.getItem('sharpve_cbt_roster_v4') || '[]');
+                attempts = JSON.parse(localStorage.getItem('sharpve_cbt_attempts_v4') || '[]');
+                offlineMarks = JSON.parse(localStorage.getItem('sharpve_cbt_offline_v4') || '[]');
+            } catch (e) {}
+
+            if (roster.length === 0) {
+                roster = [{ roll_no: 'SG1001', student_name: 'Aarav Sharma', class_name: 'Class 10', pin_code: '1001', last_year_pct: 78 }];
+                persist();
+            }
+            if (tests.length === 0) {
+                tests = [{
+                    id: 't_demo_101',
+                    test_code: 'SG101',
+                    title: 'Class 10 Maths — Quadratic Equations (CBT)',
+                    class_name: 'Class 10',
+                    subject: 'Mathematics',
+                    board: 'CBSE',
+                    chapter: 'Ch 4: Quadratic Equations',
+                    duration_mins: 15,
+                    negative_marking: false,
+                    shuffle_questions: true,
+                    questions: [
+                        { q_no: 1, variety: 'Standard MCQ', subtopic: 'Discriminant', case_passage: '', question_text: 'For $2x^2 - 4x + 2 = 0$, discriminant $D$ is:', options: ['(A) $0$', '(B) $4$', '(C) $-4$', '(D) $8$'], correct_index: 0, explanation: '$D = (-4)^2 - 4(2)(2) = 16 - 16 = 0$.' },
+                        { q_no: 2, variety: 'Assertion-Reason', subtopic: 'Roots of Quadratic', case_passage: '', question_text: 'Assertion (A): $x^2 + 1 = 0$ has no real roots.\nReason (R): For any real $x$, $x^2 \\ge 0$ so $x^2 + 1 \\ge 1 > 0$.', options: ['(A) Both A and R true, R explains A', '(B) Both A and R true, R does not explain A', '(C) A true, R false', '(D) A false, R true'], correct_index: 0, explanation: 'Since $x^2 \\ge 0$, $x^2+1$ cannot be zero for real $x$.' }
+                    ]
+                }];
+                persist();
+            }
+        }
+
+        function persist() {
+            try {
+                localStorage.setItem('sharpve_cbt_tests_v4', JSON.stringify(tests));
+                localStorage.setItem('sharpve_cbt_roster_v4', JSON.stringify(roster));
+                localStorage.setItem('sharpve_cbt_attempts_v4', JSON.stringify(attempts));
+                localStorage.setItem('sharpve_cbt_offline_v4', JSON.stringify(offlineMarks));
+            } catch (e) {}
+        }
+
+        function saveSupabaseConfig() {
+            localStorage.setItem('sharpve_sb_url', document.getElementById('sbUrlInput').value.trim());
+            localStorage.setItem('sharpve_sb_anon', document.getElementById('sbAnonKeyInput').value.trim());
+            alert('Supabase Cloud config saved in browser.');
+        }
+
+        async function syncTestToSupabase(t) {
+            const url = localStorage.getItem('sharpve_sb_url') || '';
+            const key = localStorage.getItem('sharpve_sb_anon') || '';
+            if (!url || !key) return;
+            const qPub = t.questions.map(q => ({
+                q_no: q.q_no, variety: q.variety, subtopic: q.subtopic,
+                case_passage: q.case_passage || '', question_text: q.question_text, options: q.options
+            }));
+            const qKey = t.questions.map(q => ({ correct_index: q.correct_index, explanation: q.explanation }));
+            await fetch(`${url}/rest/v1/cbt_tests`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'apikey': key, 'Authorization': `Bearer ${key}`, 'Prefer': 'return=minimal' },
+                body: JSON.stringify({
+                    test_code: t.test_code, title: t.title, class_name: t.class_name, subject: t.subject,
+                    board: t.board, chapter: t.chapter, duration_mins: t.duration_mins,
+                    negative_marking: t.negative_marking, shuffle_questions: t.shuffle_questions,
+                    questions_public: qPub, answer_key_secret: qKey
+                })
+            });
+        }
+
+        function updateSubjects() {
+            const cls = document.getElementById('bClass').value;
+            document.getElementById('bSubject').innerHTML = (SUBJECTS[cls] || SUBJECTS["Class 10"]).map(s => `<option>${s}</option>`).join('');
+        }
+
+        function switchTab(name) {
+            ['builder', 'roster', 'analytics'].forEach(t => document.getElementById('tab_' + t).classList.add('hidden'));
+            document.getElementById('tab_' + name).classList.remove('hidden');
+            ['tBuilder', 'tRoster', 'tAnalytics'].forEach(id => document.getElementById(id).className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-200 hover:bg-slate-800');
+            const activeMap = { builder: 'tBuilder', roster: 'tRoster', analytics: 'tAnalytics' };
+            document.getElementById(activeMap[name]).className = 'px-3 py-1.5 rounded-lg text-xs font-bold brand-gold';
+            renderAll();
+        }
+
+        async function saveAndTestKey() {
+            const k = document.getElementById('apiKeyInput').value.trim();
+            if (!k) return alert('Enter Gemini API Key');
+            localStorage.setItem('sharpve_gemini_key', k);
+            await discoverModels(k);
+        }
+
+        async function discoverModels(k) {
+            const st = document.getElementById('keyStatus');
+            try {
+                const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(k)}`);
+                const d = await r.json();
+                if (!r.ok) { st.textContent = 'Invalid Key'; st.className = 'text-[11px] font-bold text-red-600'; return; }
+                models = (d.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => m.name.replace('models/', '')).filter(n => n.includes('gemini') || n.includes('gemma-3'));
+                st.textContent = `Ready (${models.length} models)`;
+                st.className = 'text-[11px] font-bold text-emerald-700';
+            } catch (e) { st.textContent = 'Check failed'; }
+        }
+
+        function compressFile(file) {
+            return new Promise((res, rej) => {
+                if (!file.type.startsWith('image/')) {
+                    const fr = new FileReader();
+                    fr.onload = () => res({ inline_data: { mime_type: file.type || 'application/pdf', data: fr.result.split(',')[1] } });
+                    fr.onerror = rej; fr.readAsDataURL(file); return;
+                }
+                const img = new Image(), fr = new FileReader();
+                fr.onload = e => img.src = e.target.result;
+                img.onload = () => {
+                    const max = 1400; let w = img.width, h = img.height;
+                    if (w > max || h > max) { if (w > h) { h = Math.round(h * max / w); w = max; } else { w = Math.round(w * max / h); h = max; } }
+                    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+                    cv.getContext('2d').drawImage(img, 0, 0, w, h);
+                    res({ inline_data: { mime_type: 'image/jpeg', data: cv.toDataURL('image/jpeg', 0.85).split(',')[1] } });
+                };
+                fr.readAsDataURL(file);
+            });
+        }
+
+        async function generateDraftForReview() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (!key) return alert('Paste Gemini API Key first.');
+            const class_name = document.getElementById('bClass').value;
+            const subject = document.getElementById('bSubject').value;
+            const board = document.getElementById('bBoard').value;
+            const duration_mins = parseInt(document.getElementById('bDuration').value, 10) || 20;
+            const level = document.getElementById('bLevel').value;
+            const cntMcq = parseInt(document.getElementById('cntMcq').value, 10) || 0;
+            const cntAr = parseInt(document.getElementById('cntAr').value, 10) || 0;
+            const cntCase = parseInt(document.getElementById('cntCase').value, 10) || 0;
+            const chapter = document.getElementById('bChapter').value.trim();
+            const instructions = document.getElementById('bInstructions').value.trim();
+            const files = document.getElementById('bFiles').files;
+            if (!chapter && files.length === 0) return alert('Enter Chapter name or upload a PDF/Photo.');
+
+            const btn = document.getElementById('genDraftBtn');
+            const msg = document.getElementById('builderMsg');
+            btn.disabled = true; msg.className = 'text-xs text-center font-semibold text-indigo-800 block mt-2'; msg.textContent = 'Generating draft for teacher review...';
+
+            try {
+                const parts = [];
+                for (let i = 0; i < files.length; i++) parts.push(await compressFile(files[i]));
+                const totalQ = cntMcq + cntAr + (cntCase * 4);
+                const prompt = `Create ${totalQ} auto-gradable 4-option MCQs strictly for ${class_name} ${subject} (${board}) on chapter "${chapter}".
+Counts: ${cntMcq} "Standard MCQ", ${cntAr} "Assertion-Reason" (Assertion A + Reason R in question_text, 4 standard CBSE options), ${cntCase} Case-Study groups of 4 sub-MCQs each ("Case-Study MCQ", sharing case_passage).
+Level: ${level}. Instructions: "${instructions || 'Cover key concepts clearly.'}".
+Tag each question with "subtopic". Use single-dollar LaTeX ($...$) with double-escaped backslashes inside JSON strings.
+Return ONLY valid JSON: {"title":"...","questions":[{"q_no":1,"variety":"Standard MCQ","subtopic":"...","case_passage":"","question_text":"...","options":["(A) ...","(B) ...","(C) ...","(D) ..."],"correct_index":0,"explanation":"..."}]}`;
+                parts.push({ text: prompt });
+
+                const list = models.length > 0 ? models : ['gemini-3.8-flash', 'gemini-3.8-flash-lite', 'gemini-2.5-flash'];
+                let raw = null, errTxt = '';
+                for (const m of list) {
+                    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(key)}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.3, response_mime_type: 'application/json' } })
+                    });
+                    const d = await r.json();
+                    if (r.ok && d.candidates?.[0]) { raw = d.candidates[0].content.parts[0].text; break; }
+                    errTxt = d.error?.message || `HTTP ${r.status}`;
+                }
+                if (!raw) throw new Error(errTxt || 'Model busy');
+                const parsed = safeJSON(raw.match(/\{[\s\S]*\}/)[0]);
+
+                draftTest = {
+                    id: 't_' + Date.now(),
+                    test_code: 'SG' + Math.floor(1000 + Math.random() * 9000),
+                    title: parsed.title || `${class_name} ${subject} — ${chapter}`,
+                    class_name, subject, board, chapter, duration_mins,
+                    negative_marking: document.getElementById('bNegMarking').checked,
+                    shuffle_questions: document.getElementById('bShuffle').checked,
+                    questions: parsed.questions || []
+                };
+                renderDraftReview();
+                msg.className = 'text-xs text-center font-bold text-emerald-700 block mt-2';
+                msg.textContent = `Draft ready (${draftTest.questions.length} Qs). Verify answer key & click Approve & Publish.`;
+            } catch (e) {
+                msg.className = 'text-xs text-center font-bold text-red-600 block mt-2';
+                msg.textContent = 'Error: ' + e.message;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function renderDraftReview() {
+            const panel = document.getElementById('draftReviewPanel');
+            panel.classList.remove('hidden');
+            document.getElementById('draftTitleHeading').textContent = `Review Draft: ${draftTest.title}`;
+            const box = document.getElementById('draftQuestionsList');
+            box.innerHTML = draftTest.questions.map((q, i) => `
+                <div class="p-3 rounded-lg border border-slate-200 bg-slate-50 text-xs space-y-2">
+                    <div class="flex justify-between font-bold">
+                        <span>Q${i + 1} [${esc(q.variety)}] • Subtopic: <span class="text-indigo-800">${esc(q.subtopic)}</span></span>
+                        <label class="flex items-center gap-1 text-emerald-800">
+                            Correct Key:
+                            <select onchange="draftTest.questions[${i}].correct_index=Number(this.value)" class="border rounded px-1.5 py-0.5 bg-white font-bold">
+                                <option value="0" ${q.correct_index===0?'selected':''}>Option A</option>
+                                <option value="1" ${q.correct_index===1?'selected':''}>Option B</option>
+                                <option value="2" ${q.correct_index===2?'selected':''}>Option C</option>
+                                <option value="3" ${q.correct_index===3?'selected':''}>Option D</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="math-scroll font-medium text-slate-900">${esc(q.question_text).replace(/\n/g,'<br>')}</div>
+                    <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-700">${(q.options||[]).map(o=>`<div class="math-scroll">${esc(o)}</div>`).join('')}</div>
+                    <div class="text-[11px] text-slate-600 math-scroll"><strong>Solution:</strong> ${esc(q.explanation)}</div>
+                </div>
+            `).join('');
+            renderMath(panel);
+        }
+
+        async function publishReviewedDraft() {
+            if (!draftTest) return;
+            tests.unshift(draftTest);
+            persist();
+            await syncTestToSupabase(draftTest);
+            const code = draftTest.test_code;
+            draftTest = null;
+            document.getElementById('draftReviewPanel').classList.add('hidden');
+            renderAll();
+            alert(`Published! Student Test Code: ${code}`);
+        }
+
+        function addRosterStudent() {
+            const roll_no = document.getElementById('rRoll').value.trim();
+            const student_name = document.getElementById('rName').value.trim();
+            const class_name = document.getElementById('rClass').value;
+            const pin_code = document.getElementById('rPin').value.trim() || '1234';
+            const ly = parseFloat(document.getElementById('rLastYear').value);
+            if (!roll_no || !student_name) return alert('Enter Roll No. and Name');
+            roster.push({ roll_no, student_name, class_name, pin_code, last_year_pct: isNaN(ly) ? null : ly });
+            persist();
+            document.getElementById('rRoll').value = ''; document.getElementById('rName').value = ''; document.getElementById('rPin').value = ''; document.getElementById('rLastYear').value = '';
+            renderAll();
+        }
+
+        function saveOfflineMark() {
+            const roll_no = document.getElementById('oRoll').value.trim();
+            const subject = document.getElementById('oSubject').value.trim();
+            const assessment_type = document.getElementById('oType').value;
+            const obt = parseFloat(document.getElementById('oObt').value);
+            const max = parseFloat(document.getElementById('oMax').value);
+            if (!roll_no || !subject || isNaN(obt) || isNaN(max) || max <= 0) return alert('Fill Roll No., Subject, and valid marks.');
+            const stu = roster.find(r => r.roll_no.toLowerCase() === roll_no.toLowerCase());
+            offlineMarks.unshift({
+                roll_no, student_name: stu ? stu.student_name : roll_no,
+                subject, assessment_type, marks_obtained: obt, max_marks: max,
+                percentage: Math.round((obt / max) * 100),
+                last_year_pct: stu ? stu.last_year_pct : null
+            });
+            persist();
+            document.getElementById('oRoll').value = ''; document.getElementById('oObt').value = '';
+            renderAll();
+            alert('Offline WTP / School record saved.');
+        }
+
+        function shareWhatsAppReport(rollNo) {
+            const stu = roster.find(r => r.roll_no === rollNo) || { roll_no: rollNo, student_name: rollNo, last_year_pct: null };
+            const sAtt = attempts.filter(a => a.roll_no === rollNo);
+            const sOff = offlineMarks.filter(o => o.roll_no === rollNo);
+            const cAvg = sAtt.length ? Math.round(sAtt.reduce((s,a)=>s+a.percentage,0)/sAtt.length) + '%' : 'N/A';
+            const oAvg = sOff.length ? Math.round(sOff.reduce((s,o)=>s+o.percentage,0)/sOff.length) + '%' : 'N/A';
+            const ly = stu.last_year_pct !== null ? stu.last_year_pct + '%' : 'N/A';
+
+            const tMap = {};
+            sAtt.forEach(a => Object.entries(a.topic_stats||{}).forEach(([k,v])=>{ if(!tMap[k]) tMap[k]={c:0,t:0}; tMap[k].c+=v.correct; tMap[k].t+=v.total; }));
+            const weak = Object.entries(tMap).map(([k,v])=>({k,p:Math.round(v.c/v.t*100)})).sort((a,b)=>a.p-b.p)[0];
+
+            const txt = `*SharpVE Gurukull — Student Progress Report*\nStudent: *${stu.student_name}* (${stu.roll_no})\n• Digital CBT Avg: *${cAvg}*\n• Offline WTP/School Avg: *${oAvg}*\n• Last Year Benchmark: *${ly}*\n• Priority Weak Topic: *${weak ? weak.k + ' (' + weak.p + '%)' : 'None flagged'}*`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
+        }
+
+        function exportAttemptsCSV() {
+            const rows = [['Roll No','Student','Test','Score','Total','Percentage','Submitted At']];
+            attempts.forEach(a => rows.push([a.roll_no, a.student_name, a.test_title, a.score, a.total, a.percentage + '%', a.submitted_at]));
+            const csv = rows.map(r => r.map(x => `"${String(x||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+            a.download = 'SharpVE_CBT_Results.csv';
+            a.click();
+        }
+
+        function exportPortalBackup() {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([JSON.stringify({ tests, roster, attempts, offlineMarks }, null, 2)], { type: 'application/json' }));
+            a.download = 'SharpVE_Portal_Backup.json';
+            a.click();
+        }
+
+        function renderAll() {
+            document.getElementById('publishedTestsBox').innerHTML = tests.map(t => `
+                <div class="p-3 rounded-xl border bg-slate-50 flex flex-wrap justify-between items-center gap-2">
+                    <div>
+                        <span class="text-[11px] font-mono font-extrabold px-2 py-0.5 rounded brand-gold mr-1.5">CODE: ${esc(t.test_code)}</span>
+                        <span class="text-xs font-bold text-slate-900">${esc(t.title)}</span>
+                        <div class="text-[11px] text-slate-500 mt-0.5">${t.questions.length} Qs &bull; ${t.duration_mins} Mins &bull; Shuffle: ${t.shuffle_questions?'ON':'OFF'} &bull; Neg: ${t.negative_marking?'ON':'OFF'}</div>
+                    </div>
+                    <button onclick="tests=tests.filter(x=>x.id!=='${t.id}');persist();renderAll();" class="text-xs text-red-600 hover:underline">Remove</button>
+                </div>
+            `).join('');
+
+            document.getElementById('rosterTableBody').innerHTML = roster.map(r => `
+                <tr>
+                    <td class="p-2.5 font-mono font-bold">${esc(r.roll_no)}</td>
+                    <td class="p-2.5 font-semibold">${esc(r.student_name)}</td>
+                    <td class="p-2.5">${esc(r.class_name)}</td>
+                    <td class="p-2.5 font-mono">${esc(r.pin_code)}</td>
+                    <td class="p-2.5">${r.last_year_pct !== null ? r.last_year_pct + '%' : '--'}</td>
+                    <td class="p-2.5"><button onclick="roster=roster.filter(x=>x.roll_no!=='${r.roll_no}');persist();renderAll();" class="text-red-600 hover:underline">Delete</button></td>
+                </tr>
+            `).join('');
+
+            const tAgg = {}, vAgg = {};
+            attempts.forEach(a => {
+                Object.entries(a.topic_stats||{}).forEach(([k,v])=>{ if(!tAgg[k])tAgg[k]={c:0,t:0}; tAgg[k].c+=v.correct; tAgg[k].t+=v.total; });
+                Object.entries(a.variety_stats||{}).forEach(([k,v])=>{ if(!vAgg[k])vAgg[k]={c:0,t:0}; vAgg[k].c+=v.correct; vAgg[k].t+=v.total; });
+            });
+            document.getElementById('aWeakTopics').innerHTML = Object.entries(tAgg).map(([k,v])=>({k,p:Math.round(v.c/v.t*100),c:v.c,t:v.t})).sort((a,b)=>a.p-b.p)
+                .map(x=>`<div class="p-2 rounded border flex justify-between ${x.p<60?'bg-amber-50 border-amber-300 font-bold':'bg-slate-50'}"><span>${esc(x.k)}</span><span>${x.p}% (${x.c}/${x.t})</span></div>`).join('') || '<p class="text-slate-400 italic">No CBT attempts yet.</p>';
+            document.getElementById('aVarieties').innerHTML = Object.entries(vAgg).map(([k,v])=>{
+                const p=Math.round(v.c/v.t*100);
+                return `<div><div class="flex justify-between font-semibold mb-1"><span>${esc(k)}</span><span>${p}% (${v.c}/${v.t})</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="bg-indigo-600 h-2 rounded-full" style="width:${p}%"></div></div></div>`;
+            }).join('') || '<p class="text-slate-400 italic">No variety data yet.</p>';
+
+            document.getElementById('auditRosterBody').innerHTML = roster.map(r => {
+                const sAtt = attempts.filter(a => a.roll_no === r.roll_no);
+                const sOff = offlineMarks.filter(o => o.roll_no === r.roll_no);
+                const cAvg = sAtt.length ? Math.round(sAtt.reduce((s,a)=>s+a.percentage,0)/sAtt.length) + '%' : '--';
+                const oAvg = sOff.length ? Math.round(sOff.reduce((s,o)=>s+o.percentage,0)/sOff.length) + '%' : '--';
+                const tm = {}; sAtt.forEach(a=>Object.entries(a.topic_stats||{}).forEach(([k,v])=>{if(!tm[k])tm[k]={c:0,t:0};tm[k].c+=v.correct;tm[k].t+=v.total;}));
+                const weak = Object.entries(tm).map(([k,v])=>({k,p:Math.round(v.c/v.t*100)})).sort((a,b)=>a.p-b.p)[0];
+                return `
+                    <tr>
+                        <td class="p-2.5 font-bold">${esc(r.student_name)} <span class="text-slate-400 font-mono">(${esc(r.roll_no)})</span></td>
+                        <td class="p-2.5 font-semibold">${cAvg}</td>
+                        <td class="p-2.5 font-semibold">${oAvg}</td>
+                        <td class="p-2.5">${r.last_year_pct!==null?r.last_year_pct+'%':'--'}</td>
+                        <td class="p-2.5 text-amber-800 font-semibold">${weak?esc(weak.k)+' ('+weak.p+'%)':'--'}</td>
+                        <td class="p-2.5"><button onclick="shareWhatsAppReport('${r.roll_no}')" class="bg-emerald-600 text-white px-2.5 py-1 rounded text-[11px] font-bold">WhatsApp</button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function safeJSON(s) {
+            try { return JSON.parse(s); } catch (e) {
+                let c = s.replace(/,\s*([}\]])/g,'$1').replace(/\\(frac|sqrt|times|div|pm|cdot|leq|geq|neq|alpha|beta|gamma|delta|theta|pi|sin|cos|tan|left|right|text)/g,'\\\\$1').replace(/\\(?!["\\/bfnrtu])/g,'\\\\');
+                return JSON.parse(c);
+            }
+        }
+        function renderMath(el) { if (window.renderMathInElement) renderMathInElement(el, { delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false }); }
+        function esc(t) { return t===null||t===undefined?'':String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    </script>
+</body>
+</html>
